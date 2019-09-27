@@ -1,0 +1,33 @@
+@echo off
+setlocal
+pushd %~dp0
+
+set routor_ip_address=...
+set routor_username=...
+set routor_password=...
+set provider_username=...
+
+: Display IP address before process
+for /F %%i in ('curl inet-ip.info -Ss') do ( set ip_address=%%i )
+echo Current IP adress: %ip_address%
+
+rem Get security-token from list page
+set xpath="string(//form[@id='SETTING_INFO_FORM']/input[@name='SECURITY_TOKEN']/@value)"
+for /F %%i in ('curl %routor_ip_address%/ntt/basic/v4pppoe -Ss -u %routor_username%:%routor_password% ^| xmllint --html --xpath %xpath% -') do ( set security_token=%%i )
+
+rem Get security-token from setting page
+set xpath="string(//form/input[@name='SECURITY_TOKEN']/@value)"
+for /F %%i in ('curl %routor_ip_address%/ntt/basic/v4pppoe/detail -Ss -u %routor_username%:%routor_password% -c cookie.txt -X POST -d pppoeSessionID^=1 -d SECURITY_TOKEN^=%security_token% ^| xmllint --html --xpath %xpath% -') do ( set security_token=%%i )
+
+rem Submit setting
+set curl_format='%%{http_code}'
+for /F %%i in ('curl %routor_ip_address%/ntt/basic/v4pppoe/detail/setting -Ss -o /dev/null -w %%{http_code} -u %routor_username%:%routor_password% -b cookie.txt -X POST -d pppoeSessionID^=1 -d connectionName^=isp -d userName^=%provider_username% -d password^=xxxx -d autoIPMode^=1 -d autoDNSFlag^=true -d authMode^=1 -d connectMode^=1 -d initialDisconnectTime^=30 -d pppoeKeepFlag^=true -d lcpInterval^=1 -d initialLcpInterval^=1 -d lcpRetryNumber^=10 -d initialLcpRetryNumber^=10 -d passwordEditFlag^=false -d SECURITY_TOKEN^=%security_token%') do ( set result_status=%%i )
+
+echo Done with status %result_status%
+
+rem Display IP address after process
+for /F %%i in ('curl inet-ip.info -Ss') do ( set ip_address=%%i )
+echo New IP adress: %ip_address%
+
+popd
+endlocal
