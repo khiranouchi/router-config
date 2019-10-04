@@ -29,5 +29,7 @@ rem Display IP address after process
 for /F %%i in ('curl inet-ip.info -Ss') do ( set ip_address=%%i )
 echo New IP adress: %ip_address%
 
+set /P input="Press any key to exit..."
+
 popd
 endlocal
